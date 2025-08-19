@@ -17,64 +17,333 @@ You should comment out all portions of your portfolio that you have not complete
   
 # Final Milestone
 
-**Don't forget to replace the text below with the embedding for your milestone video. Go to Youtube, click Share -> Embed, and copy and paste the code to replace what's below.**
+<iframe width="560" height="315" src="https://www.youtube.com/embed/SGvWFN6ajE4?si=pDGj1pSb-8-ayTL7" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/F7M7imOVGug" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-
-For your final milestone, explain the outcome of your project. Key details to include are:
-- What you've accomplished since your previous milestone
-- What your biggest challenges and triumphs were at BSE
-- A summary of key topics you learned about
-- What you hope to learn in the future after everything you've learned at BSE
-
+For my third milestone, my project has taken some turns. I figured out that the display error was due to a mistake downloading software, and I then was left with an extra pyportal. I decided to put the weather station project on it. At this point, everything is working except for the case.
 
 
 # Second Milestone
 
-**Don't forget to replace the text below with the embedding for your milestone video. Go to Youtube, click Share -> Embed, and copy and paste the code to replace what's below.**
-
 <iframe width="560" height="315" src="https://www.youtube.com/embed/ZXR5FIL41eM?si=ao-HjQpJ1twepocM" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
-For your second milestone, explain what you've worked on since your previous milestone. You can highlight:
-- Technical details of what you've accomplished and how they contribute to the final goal
-- What has been surprising about the project so far
-- Previous challenges you faced that you overcame
-- What needs to be completed before your final milestone 
+For my second milestone, I set up the retro weather station code. However, my screen appeared to be damaged, so I purchased another. That is currently on its way. I have recently been working hard on the 3d case model, however I have run into some issues trying to expose the screw holes.
 
 # First Milestone
 
-**Don't forget to replace the text below with the embedding for your milestone video. Go to Youtube, click Share -> Embed, and copy and paste the code to replace what's below.**
-
 <iframe width="560" height="315" src="https://www.youtube.com/embed/Z6Yy1uXVXdM?si=BsAsUV3GmSBi8bED" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
-For your first milestone, describe what your project is and how you plan to build it. You can include:
-- An explanation about the different components of your project and how they will all integrate together
-- Technical progress you've made so far
-- Challenges you're facing and solving in your future milestones
-- What your plan is to complete your project
-
-# Schematics 
-Here's where you'll put images of your schematics. [Tinkercad](https://www.tinkercad.com/blog/official-guide-to-tinkercad-circuits) and [Fritzing](https://fritzing.org/learning/) are both great resoruces to create professional schematic diagrams, though BSE recommends Tinkercad becuase it can be done easily and for free in the browser. 
+For my first milestone, I set up the base model and dealt with any problems that I faced. I started off confident that I hadn’t made a mistake, however, I noticed that the message that was displayed on startup was slightly different from what I expected, which helped me to come to the conclusion that I had downloaded an older version of the CircuitPython software, and once I downloaded the most recent version, the correct message was displayed. Later on, I noticed that my map was timing out, and I deduced that my settings.toml did not include necessary information, and once corrected, my tracker was functional.
 
 # Code
-Here's where you'll put your code. The syntax below places it into a block of code. Follow the guide [here]([url](https://www.markdownguide.org/extended-syntax/)) to learn how to customize it to your project needs. 
 
-```c++
-void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(9600);
-  Serial.println("Hello World!");
-}
+```circuitpy
+# SPDX-FileCopyrightText: 2020 Liz Clark for Adafruit Industries
+#
+# SPDX-License-Identifier: MIT
 
-void loop() {
-  // put your main code here, to run repeatedly:
+from os import getenv
+import time
+from calendar import alarms
+from calendar import timers
+import board
+import displayio
+from digitalio import DigitalInOut, Direction, Pull
+from adafruit_pyportal import PyPortal
+import openweather_graphics  # pylint: disable=wrong-import-position
 
-}
+# Get WiFi details, ensure these are setup in settings.toml
+ssid = getenv("CIRCUITPY_WIFI_SSID")
+password = getenv("CIRCUITPY_WIFI_PASSWORD")
+
+if None in [ssid, password]:
+    raise RuntimeError(
+        "WiFi settings are kept in settings.toml, "
+        "please add them there. The settings file must contain "
+        "'CIRCUITPY_WIFI_SSID', 'CIRCUITPY_WIFI_PASSWORD', "
+        "at a minimum."
+    )
+
+# Use cityname, country code where countrycode is ISO3166 format.
+# E.g. "New York, US" or "London, GB"
+LOCATION = getenv('location')
+
+# Set up where we'll be fetching data from
+DATA_SOURCE = "http://api.openweathermap.org/data/2.5/weather?q=" + LOCATION
+DATA_SOURCE += "&appid=" + getenv('openweather_token')
+# You'll need to get a token from openweather.org, looks like 'b6907d289e10d714a6e88b30761fae22'
+DATA_LOCATION = []
+
+# Initialize the pyportal object and let us know what data to fetch and where
+# to display it
+pyportal = PyPortal(url=DATA_SOURCE,
+                    json_path=DATA_LOCATION,
+                    status_neopixel=board.NEOPIXEL,
+                    default_bg=0x000000)
+
+display = board.DISPLAY
+
+#  the alarm sound file locations
+#alarm_sound_trash = "/sounds/trash.wav"
+#alarm_sound_bed = "/sounds/sleep.wav"
+#alarm_sound_eat = "/sounds/eat.wav"
+
+#  the alarm sounds in an array that matches the order of the gfx & alarm check-ins
+#alarm_sounds = [alarm_sound_trash, alarm_sound_bed,
+#                alarm_sound_eat, alarm_sound_eat, alarm_sound_eat]
+
+#  setting up the bitmaps for the alarms
+
+#  sleep alarm
+#sleep_bitmap = displayio.OnDiskBitmap("/sleepBMP.bmp")
+#sleep_tilegrid = displayio.TileGrid(sleep_bitmap, pixel_shader=sleep_bitmap.pixel_shader)
+#group_bed = displayio.Group()
+#group_bed.append(sleep_tilegrid)
+
+#  trash alarm
+#trash_bitmap = displayio.OnDiskBitmap("/trashBMP.bmp")
+#trash_tilegrid = displayio.TileGrid(trash_bitmap, pixel_shader=trash_bitmap.pixel_shader)
+#group_trash = displayio.Group()
+#group_trash.append(trash_tilegrid)
+
+#  meal alarm
+#eat_bitmap = displayio.OnDiskBitmap("/eatBMP.bmp")
+#eat_tilegrid = displayio.TileGrid(eat_bitmap, pixel_shader=eat_bitmap.pixel_shader)
+#group_eat = displayio.Group()
+#group_eat.append(eat_tilegrid)
+
+#  snooze touch screen buttons
+#  one for each alarm bitmap
+#snooze_controls = [
+#    {'label': "snooze_trash", 'pos': (4, 222), 'size': (236, 90), 'color': None},
+#    {'label': "snooze_bed", 'pos': (4, 222), 'size': (236, 90), 'color': None},
+#    {'label': "snooze_eat", 'pos': (4, 222), 'size': (236, 90), 'color': None},
+#    ]
+
+#  setting up the snooze buttons as buttons
+#snooze_buttons = []
+#for s in snooze_controls:
+#    snooze_button = Button(x=s['pos'][0], y=s['pos'][1],
+#                           width=s['size'][0], height=s['size'][1],
+#                           style=Button.RECT,
+#                           fill_color=s['color'], outline_color=None,
+#                           name=s['label'])
+#    snooze_buttons.append(snooze_button)
+
+#  dismiss touch screen buttons
+#  one for each alarm bitmap
+#dismiss_controls = [
+#    {'label': "dismiss_trash", 'pos': (245, 222), 'size': (230, 90), 'color': None},
+#    {'label': "dismiss_bed", 'pos': (245, 222), 'size': (230, 90), 'color': None},
+#    {'label': "dismiss_eat", 'pos': (245, 222), 'size': (230, 90), 'color': None},
+#    ]
+
+#  setting up the dismiss buttons as buttons
+#dismiss_buttons = []
+#for d in dismiss_controls:
+#    dismiss_button = Button(x=d['pos'][0], y=d['pos'][1],
+#                            width=d['size'][0], height=d['size'][1],
+#                            style=Button.RECT,
+#                            fill_color=d['color'], outline_color=None,
+#                            name=d['label'])
+#   dismiss_buttons.append(dismiss_button)
+
+#  adding the touch screen buttons to the different alarm gfx groups
+#group_trash.append(snooze_buttons[0].group)
+#group_trash.append(dismiss_buttons[0].group)
+#group_bed.append(snooze_buttons[1].group)
+#group_bed.append(dismiss_buttons[1].group)
+#group_eat.append(snooze_buttons[2].group)
+#group_eat.append(dismiss_buttons[2].group)
+
+#  setting up the hardware snooze/dismiss buttons
+#switch_snooze = DigitalInOut(board.D3)
+#switch_snooze.direction = Direction.INPUT
+#switch_snooze.pull = Pull.UP
+
+#switch_dismiss = DigitalInOut(board.D4)
+#switch_dismiss.direction = Direction.INPUT
+#switch_dismiss.pull = Pull.UP
+
+#  grabbing the alarm times from the calendar file
+#  'None' is the placeholder for trash, which is weekly rather than daily
+#alarm_checks = [None, alarms['bed'],alarms['breakfast'],alarms['lunch'],alarms['dinner']]
+#  all of the alarm graphics
+#alarm_gfx = [group_trash, group_bed, group_eat, group_eat, group_eat]
+
+#  allows for the openweather_graphics to show
+gfx = openweather_graphics.OpenWeather_Graphics(pyportal.root_group, am_pm=True, celsius=False)
+
+#  state machines
+localtile_refresh = None
+weather_refresh = None
+dismissed = None
+touched = None
+start = None
+alarm = None
+snoozed = None
+touch_button_snooze = None
+touch_button_dismiss = None
+phys_dismiss = None
+phys_snooze = None
+mode = 0
+button_mode = 0
+
+#  weekday array
+weekday = ["Mon.", "Tues.", "Wed.", "Thurs.", "Fri.", "Sat.", "Sun."]
+
+#  weekly alarm setup. checks for weekday and time
+#weekly_alarms = [alarms['trash']]
+#weekly_day = [alarms['trash'][0]]
+#weekly_time = [alarms['trash'][1]]
+
+while True:
+    # while esp.is_connected:
+    # only query the online time once per hour (and on first run)
+    if (not localtile_refresh) or (time.monotonic() - localtile_refresh) > 3600:
+        try:
+            print("Getting time from internet!")
+            pyportal.get_local_time()
+            localtile_refresh = time.monotonic()
+        except RuntimeError as e:
+            print("Some error occured, retrying! -", e)
+            continue
+
+    if not alarm:
+    # only query the weather every 10 minutes (and on first run)
+    #  only updates if an alarm is not active
+        if (not weather_refresh) or (time.monotonic() - weather_refresh) > 600:
+            try:
+                value = pyportal.fetch()
+                print("Response is", value)
+                gfx.display_weather(value)
+                weather_refresh = time.monotonic()
+            except RuntimeError as e:
+                print("Some error occured, retrying! -", e)
+                continue
+    #  updates time to check alarms
+    #  checks every 30 seconds
+    #  identical to def(update_time) in openweather_graphics.py
+    if (not start) or (time.monotonic() - start) > 30:
+        #  grabs all the time data
+        clock = time.localtime()
+        date = clock[2]
+        hour = clock[3]
+        minute = clock[4]
+        day = clock[6]
+        today = weekday[day]
+        format_str = "%d:%02d"
+        date_format_str = " %d, %d"
+        if hour >= 12:
+            hour -= 12
+            format_str = format_str+" PM"
+        else:
+            format_str = format_str+" AM"
+        if hour == 0:
+            hour = 12
+        #  formats date display
+        today_str = today
+        time_str = format_str % (hour, minute)
+        #  checks for weekly alarms
+        #for i in weekly_alarms:
+        #    w = weekly_alarms.index(i)
+        #    if time_str == weekly_time[w] and today == weekly_day[w]:
+        #        print("trash time")
+        #        alarm = True
+        #        if alarm and not dismissed and not snoozed:
+        #            display.root_group = alarm_gfx[w]
+        #            pyportal.play_file(alarm_sounds[w])
+        #        mode = w
+        #        print("mode is:", mode)
+        #  checks for daily alarms
+        #for i in alarm_checks:
+        #    a = alarm_checks.index(i)
+        #    if time_str == alarm_checks[a]:
+        #        alarm = True
+        #        if alarm and not dismissed and not snoozed:
+        #            display.root_group = alarm_gfx[a]
+        #            pyportal.play_file(alarm_sounds[a])
+        #        mode = a
+        #        print(mode)
+        #  calls update_time() from openweather_graphics to update
+        #  clock display
+        gfx.update_time()
+        #  gfx.update_date()
+        #  resets time counter
+        start = time.monotonic()
+
+    #  allows for the touchscreen buttons to work
+    if mode > 1:
+        button_mode = 2
+    else:
+        button_mode = mode
+        #  print("button mode is", button_mode)
+
+    #  hardware snooze/dismiss button setup
+    #if switch_dismiss.value and phys_dismiss:
+    #    phys_dismiss = False
+    #if switch_snooze.value and phys_snooze:
+    #    phys_snooze = False
+    #if not switch_dismiss.value and not phys_dismiss:
+    #    phys_dismiss = True
+    #    print("pressed dismiss button")
+    #    dismissed = True
+    #    alarm = False
+    #    display.root_group = pyportal.root_group
+    #    touched = time.monotonic()
+    #    mode = mode
+    #if not switch_snooze.value and not phys_snooze:
+    #    phys_snooze = True
+    #    print("pressed snooze button")
+    #    display.root_group = pyportal.root_group
+    #    snoozed = True
+    #    alarm = False
+    #    touched = time.monotonic()
+    #    mode = mode
+
+    #  touchscreen button setup
+    #touch = pyportal.touchscreen.touch_point
+    #if not touch and touch_button_snooze:
+    #    touch_button_snooze = False
+    #if not touch and touch_button_dismiss:
+    #    touch_button_dismiss = False
+    #if touch:
+    #    if snooze_buttons[button_mode].contains(touch) and not touch_button_snooze:
+    #        print("Touched snooze")
+    #        display.root_group = pyportal.root_group
+    #        touch_button_snooze = True
+    #        snoozed = True
+    #        alarm = False
+    #        touched = time.monotonic()
+    #        mode = mode
+    #    if dismiss_buttons[button_mode].contains(touch) and not touch_button_dismiss:
+    #        print("Touched dismiss")
+    #        dismissed = True
+    #        alarm = False
+    #        display.root_group = pyportal.root_group
+    #        touch_button_dismiss = True
+    #        touched = time.monotonic()
+    #        mode = mode
+
+    #  this is a little delay so that the dismissed state
+    #  doesn't collide with the alarm if it's dismissed
+    #  during the same time that the alarm activates
+    if (not touched) or (time.monotonic() - touched) > 70:
+        dismissed = False
+    #  snooze portion
+    #  pulls snooze_time from calendar and then when it's up
+    #  splashes the snoozed alarm's graphic, plays the alarm sound and goes back into
+    #  alarm state
+    #if (snoozed) and (time.monotonic() - touched) > timers['snooze_time']:
+    #    print("snooze over")
+    #    snoozed = False
+    #    alarm = True
+    #    mode = mode
+    #    display.root_group = alarm_gfx[mode]
+    #    pyportal.play_file(alarm_sounds[mode])
+    #    print(mode)
 ```
 
 # Bill of Materials
-Here's where you'll list the parts in your project. To add more rows, just copy and paste the example rows below.
-Don't forget to place the link of where to buy each component inside the quotation marks in the corresponding row after href =. Follow the guide [here]([url](https://www.markdownguide.org/extended-syntax/)) to learn how to customize this to your project needs. 
 
 | **Part** | **Note** | **Price** | **Link** |
 |:--:|:--:|:--:|:--:|
@@ -83,10 +352,3 @@ Don't forget to place the link of where to buy each component inside the quotati
 | 5V 1A USB port power supply  | Connecting PyPortal to wall outlet | $5.95 | <a href="https://www.adafruit.com/product/501"> Link </a> |
 | USB A to B Cable | Connecting PyPortal to computer or wall outlet | $2.95 | <a href="https://www.adafruit.com/product/592"> Link </a> |
 
-# Other Resources/Examples
-One of the best parts about Github is that you can view how other people set up their own work. Here are some past BSE portfolios that are awesome examples. You can view how they set up their portfolio, and you can view their index.md files to understand how they implemented different portfolio components.
-- [Example 1](https://trashytuber.github.io/YimingJiaBlueStamp/)
-- [Example 2](https://sviatil0.github.io/Sviatoslav_BSE/)
-- [Example 3](https://arneshkumar.github.io/arneshbluestamp/)
-
-To watch the BSE tutorial on how to create a portfolio, click here.
