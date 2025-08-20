@@ -1,17 +1,10 @@
 # 2025_ISS_TRACKER
 My ISS Tracker is displayed on a screen, called a PyPortal, which stores and runs my code on its own. I have a second pyportal, as I mistakingly believed that my first display was broken, and decided to keep both screens rather than letting one go to waste. On the second one, a simplified version of the retro weather station project is stored, and I am currently 3d printing custom cases for each screen.
 
-You should comment out all portions of your portfolio that you have not completed yet, as well as any instructions:
-```HTML 
-<!--- This is an HTML comment in Markdown -->
-<!--- Anything between these symbols will not render on the published site -->
-```
 
 | **Engineer** | **School** | **Area of Interest** | **Grade** |
 |:--:|:--:|:--:|:--:|
 | Eli B | Schreiber High School | Coding | Incoming Sophomore
-
-**Replace the BlueStamp logo below with an image of yourself and your completed project. Follow the guide [here](https://tomcam.github.io/least-github-pages/adding-images-github-pages-site.html) if you need help.**
 
 ![Headstone Image](logo.svg)
   
